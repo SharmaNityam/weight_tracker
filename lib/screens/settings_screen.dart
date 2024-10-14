@@ -31,39 +31,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, settings) {
           return Form(
             key: _formKey,
-            child: Padding(
+            child: ListView(
               padding: EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(labelText: 'Your Name'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Your Name',
+                    border: OutlineInputBorder(),
                   ),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Text('Notification Time: ${_notificationTime.format(context)}'),
-                      SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => _selectTime(context),
-                        child: Text('Change Time'),
-                      ),
-                    ],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your name';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                ListTile(
+                  title: Text('Notification Time'),
+                  subtitle: Text(_notificationTime.format(context)),
+                  trailing: Icon(Icons.arrow_forward_ios),
+                  onTap: () => _selectTime(context),
+                ),
+                SizedBox(height: 16),
+                SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _saveSettings,
+                  child: Text('Save Settings'),
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 16),
                   ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _saveSettings,
-                    child: Text('Save Settings'),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -85,12 +85,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveSettings() {
     if (_formKey.currentState!.validate()) {
-      final newSettings = UserSettings(
+      final newSettings = context.read<SettingsBloc>().state.copyWith(
         userName: _nameController.text,
         notificationTime: _notificationTime,
       );
       context.read<SettingsBloc>().updateSettings(newSettings);
-      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Settings saved')),
+      );
     }
   }
 }
