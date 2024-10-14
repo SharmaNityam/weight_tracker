@@ -1,128 +1,247 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:weight_tracker/blocs/weight_bloc.dart';
+import 'package:weight_tracker/blocs/settings_bloc.dart';
 import 'package:weight_tracker/models/weight_entry.dart';
+import 'package:weight_tracker/models/user_settings.dart';
 import 'package:weight_tracker/screens/add_weight_screen.dart';
-import 'package:weight_tracker/screens/settings_screen.dart';
-import 'package:weight_tracker/widgets/weight_list_item.dart';
-import 'package:weight_tracker/widgets/weight_chart.dart';
+import 'package:intl/intl.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: <Widget>[
-          SliverAppBar(
-            expandedHeight: 200.0,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text('Weight Tracker'),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [Colors.teal, Colors.tealAccent],
+    return BlocBuilder<SettingsBloc, UserSettings>(
+      builder: (context, settings) {
+        return Scaffold(
+          body: CustomScrollView(
+            slivers: <Widget>[
+              SliverAppBar(
+                expandedHeight: 120.0,
+                floating: false,
+                pinned: true,
+             flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          Color.fromARGB(255, 77, 166, 136),
+                          Color.fromARGB(255, 65, 112, 106)
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Align(
+                        alignment: Alignment
+                            .bottomLeft, 
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 24, left: 16),
+                          child: Text(
+                            _getGreeting(settings.userName),
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Montserrat',
+                              color: Colors
+                                  .white, // 
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
+                actions: [
+                  IconButton(icon: Icon(Icons.notifications), onPressed: () {}),
+                ],
               ),
-            ),
-            actions: [
-              IconButton(
-                icon: Icon(Icons.settings),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SettingsScreen()),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HealthOverviewCard(),
+                      SizedBox(height: 16),
+                      // WeightChartCard(),
+                      SizedBox(height: 16),
+                      RecentWeightEntriesCard(),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-          SliverToBoxAdapter(
-            child: Container(
-              height: 200,
-              padding: EdgeInsets.all(16),
-              child: BlocBuilder<WeightBloc, List<WeightEntry>>(
-                builder: (context, weights) {
-                  return WeightChart(weights: weights);
-                },
-              ),
+          floatingActionButton: FloatingActionButton(
+            child: Icon(Icons.add),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddWeightScreen()),
             ),
           ),
-          BlocBuilder<WeightBloc, List<WeightEntry>>(
-            builder: (context, weights) {
-              if (weights.isEmpty) {
-                return SliverFillRemaining(
-                  child: Center(child: Text('No weight entries yet.')),
-                );
-              }
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final entry = weights[index];
-                    final previousDay = index < weights.length - 1
-                        ? weights[index + 1].date
-                        : entry.date.subtract(Duration(days: 1));
-                    
-                    final List<Widget> items = [];
-                    
-                    // Add missed days
-                    for (int i = 1; i < entry.date.difference(previousDay).inDays; i++) {
-                      items.add(ListTile(
-                        title: Text('No entry'),
-                        subtitle: Text(previousDay.add(Duration(days: i)).toString().split(' ')[0]),
-                        tileColor: Colors.grey[200],
-                      ));
-                    }
-                    
-                    // Add the actual weight entry
-                    items.add(WeightListItem(
-                      entry: entry,
-                      onDelete: () => _showDeleteConfirmation(context, entry),
-                    ));
-                    
-                    return Column(children: items);
-                  },
-                  childCount: weights.length,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => AddWeightScreen()),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, WeightEntry entry) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Delete Entry'),
-          content: Text('Are you sure you want to delete this weight entry?'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(),
+  String _getGreeting(String name) {
+    var hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good morning,\n$name';
+    } else if (hour < 17) {
+      return 'Good afternoon,\n$name';
+    } else {
+      return 'Good evening,\n$name';
+    }
+  }
+}
+
+class HealthOverviewCard extends StatefulWidget {
+  @override
+  _HealthOverviewCardState createState() => _HealthOverviewCardState();
+}
+
+class _HealthOverviewCardState extends State<HealthOverviewCard> {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<WeightBloc, List<WeightEntry>>(
+      builder: (context, weights) {
+        double currentWeight = weights.isNotEmpty ? weights.first.weight : 0;
+        double weightLoss = _calculateWeightLoss(weights);
+        int daysTracked = weights.length;
+
+        return Card(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Health Overview', style: Theme.of(context).textTheme.titleLarge),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildMetric(context, Icons.monitor_weight, currentWeight.toStringAsFixed(1), 'Current Weight'),
+                    _buildMetric(context, Icons.trending_down, weightLoss.toStringAsFixed(1), 'Weight Loss'),
+                    _buildMetric(context, Icons.calendar_today, daysTracked.toString(), 'Days Tracked'),
+                  ],
+                ),
+              ],
             ),
-            TextButton(
-              child: Text('Delete'),
-              onPressed: () {
-                context.read<WeightBloc>().deleteWeight(entry);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildMetric(BuildContext context, IconData icon, String value, String label) {
+    return Column(
+      children: [
+        Icon(icon, color: Theme.of(context).colorScheme.secondary),
+        SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Montserrat',
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontFamily: 'Montserrat',
+          ),
+        ),
+      ],
+    );
+  }
+
+  double _calculateWeightLoss(List<WeightEntry> weights) {
+    if (weights.length < 2) return 0;
+    return weights.first.weight - weights.last.weight;
+  }
+}
+
+class RecentWeightEntriesCard extends StatefulWidget {
+  @override
+  _RecentWeightEntriesCardState createState() => _RecentWeightEntriesCardState();
+}
+
+class _RecentWeightEntriesCardState extends State<RecentWeightEntriesCard> {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<WeightBloc, List<WeightEntry>>(
+      builder: (context, weights) {
+        return Card(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Recent Entries', style: Theme.of(context).textTheme.titleLarge),
+                SizedBox(height: 16),
+                Column(
+                  children: weights.take(5).map((entry) => _buildWeightListItem(context, entry)).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWeightListItem(BuildContext context, WeightEntry entry) {
+    return Dismissible(
+      key: Key(entry.id.toString()),
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: EdgeInsets.only(right: 20),
+        child: Icon(Icons.delete, color: Colors.white),
+      ),
+      direction: DismissDirection.endToStart,
+      onDismissed: (direction) {
+        context.read<WeightBloc>().deleteWeight(entry);
+      },
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.secondary,
+          child: Text(
+            '${entry.weight.toStringAsFixed(1)}',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        title: Text(
+          '${entry.weight} kg',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Text(
+          DateFormat('MMM d, y').format(entry.date),
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+          ),
+        ),
+        trailing: Icon(Icons.chevron_right, color: Theme.of(context).iconTheme.color),
+      ),
     );
   }
 }
